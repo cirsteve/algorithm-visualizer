@@ -1,0 +1,1 @@
+var DVZ = window.DVZ || {};
