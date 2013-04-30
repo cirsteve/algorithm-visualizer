@@ -3,10 +3,17 @@
         defaults: {
             dataPoint: 0,
             min: 0,
-            max: 100
+            max: 100,
+            active: false
         },
+
         initialize: function () {
             this.set('dataPoint', this.randomizeSelf());
+        },
+    
+        deactivate: function () {
+            this.set('active', false);
+            return this;
         },
     
         getRange: function () {
@@ -15,6 +22,11 @@
 
         randomizeSelf: function () {
             return Math.floor(Math.random() * this.getRange() + 1);
+        },
+
+        setActive: function () {
+            this.set('active', true);
+            return this;
         }
     });
 
