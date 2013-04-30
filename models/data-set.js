@@ -25,7 +25,7 @@
             collection = this.get('collection');
 
             while (i<len) {
-            collection.add({})
+            collection.add({id:i})
             i++;
             }
         }
