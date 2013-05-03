@@ -1,6 +1,8 @@
 (function (Backbone, $, _, undefined) {
     DVZ.DataSetView = Backbone.View.extend({
         template: MNKY.TMPL.algoviz_dataset,
+
+        className: 'row',
         
         events: function () {
             return {
@@ -19,7 +21,17 @@
         render: function() {
             this.$el.html(this.template({}));
             $('#dvz-target').append(this.el);
-            this.renderDataPointsD3();
+            var that = this;
+            $('#time-step').slider({
+                max: 1250,
+                min: 250,
+                value: 700,
+                change: function (ev, ui) {
+                    that.updateTimeStep(ev, ui, that);
+                }
+            });
+            this.initSvg();
+            this.initRender();
 
         },
 
@@ -28,16 +40,13 @@
             this.blockW = 20;
             this.blockH = 120;
             this.svgHeight = 300;
+            this.timeStep = 500;
             this.xSc = d3.scale.linear()
                     .domain([0,1])
                     .range([0,this.blockW]);
             this.ySc = d3.scale.linear()
                     .domain([0,100])
                     .range([0,this.blockH]);
-            this.svg = d3.select("#d3-target").append("svg")
-                    .attr("class","sortees")
-                    .attr( "width", (this.dataArray.length) * this.blockW)
-                    .attr("height", this.svgHeight);
         },
 
         renderDataPoints: function () {
@@ -47,38 +56,91 @@
 
         },
 
-        renderDataPointsD3: function () {
-            console.log('rend3', this.dataArray);
-            var localFuncs = _.extend({}, this)
+        initRender: function () {
+            var localFuncs = _.extend({}, this);
             this.svg.selectAll("rect")
                 .data(this.dataArray.toJSON(), function (d) { return d.id;})
                 .enter().append("rect")
                     .attr("x", function(d,i) {return localFuncs.xSc(i) - .5;})
-                    .attr("y", function(d) {return 150 + localFuncs.blockH - localFuncs.ySc(d.dataPoint) - .5;})
+                    .attr("y", function(d) {return 100 + localFuncs.blockH - localFuncs.ySc(d.dataPoint) - .5;})
                     .attr("width", localFuncs.blockW)
                     .attr("height", function(d) {return localFuncs.ySc(d.dataPoint);});
+        },
+
+        initSvg: function () {
+            this.svg = d3.select("#d3-target").append("svg")
+                    .attr("class","sortees")
+                    .attr( "width", (this.dataArray.length) * this.blockW)
+                    .attr("height", this.svgHeight);
+        },
+
+        renderDataPointsD3: function () {
+            console.log('rend3', this.dataArray.toJSON());
+            var localFuncs = _.extend({}, this);
             this.svg.selectAll("rect")
                 .data(this.dataArray.toJSON(), function (d) { return d.id;})
                 .transition().duration(1000)
                     .attr("x", function(d,i) {return localFuncs.xSc(i) - .5;})
-                    .attr("y", function(d) {return d.active ? localFuncs.blockH - localFuncs.ySc(d.dataPoint) - .5 : 150 + localFuncs.blockH - localFuncs.ySc(d.dataPoint) - .5;})
+                    .attr("y", function(d) {return d.active ? localFuncs.blockH - localFuncs.ySc(d.dataPoint) - .5 : 75 + localFuncs.blockH - localFuncs.ySc(d.dataPoint) - .5;})
                     .attr("class", function(d) {return d.active ? "active" : "";});
         },
 
         reset: function () {
-            this.model.createSet();
-            this.renderDataPointsD3();
+            this.insModel.set('stopSort',true); 
+            delete this.insModel;
+            delete this.insView;
+
+            this.dataArray = this.model.createSet().get("collection");
+            this.resetRender();
+        },
+
+        resetRender: function () {
+            var localFuncs = _.extend({}, this);
+            this.svg.selectAll("rect")
+                .data(this.dataArray.toJSON(), function (d) { return d.id;})
+                .transition().duration(1000)
+                    .attr("x", function(d,i) {return localFuncs.xSc(i) - .5;})
+                    .attr("y", function(d) {return d.active ? localFuncs.blockH - localFuncs.ySc(d.dataPoint) - .5 : 75 + localFuncs.blockH - localFuncs.ySc(d.dataPoint) - .5;})
+                    .attr("width", localFuncs.blockW)
+                    .attr("height", function(d) {return localFuncs.ySc(d.dataPoint);})
+                    .attr("class", "");
+
         },
 
         insertion: function () {
-            var insModel = new DVZ.InsertionModel({collection:this.model.get('collection')});
-            insModel.on("redraw", this.renderDataPointsD3, this);
-            insModel.sort();
+            this.insModel = new DVZ.InsertionModel({
+                collection:this.model.get('collection'),
+                stepDelay: this.timeStepCache || 500
+            });
+
+            this.insView = new DVZ.InsertionView({
+                svg: this.svg,dataArray: this.dataArray,
+                model: this.insModel
+            });
+
+            this.insModel.on("redraw", this.insView.render, this);
+            this.insModel.sort();
         },
     
         merge: function () {
-            this.model.get('collection').mergeSort();
-            this.renderDataPoints();
+            var mergeModel = new DVZ.MergeModel({
+                    collection:this.model.get('collection')
+                }),
+                mergeView = new DVZ.MergeView({
+                    svg:this.svg,
+                    dataArray: this.dataArray
+                });
+            mergeModel.on("redraw", this.renderDataPointsD3, this);
+            mergeModel.sort();
+        },
+
+        updateTimeStep: function (ev, ui, that) {
+            console.log('time step change ', ev, ui);
+            if (that.insModel) {
+                that.insModel.set("stepDelay", ui.value);
+            } else {
+                this.timeStepCache = ui.value;
+            }
         }
 
     });

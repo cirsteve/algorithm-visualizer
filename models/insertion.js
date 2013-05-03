@@ -9,12 +9,15 @@
                     indexCheck: 1,
                     indexTotal: 1,
                     collection: options.collection,
-                    length: options.collection.length
+                    length: options.collection.length,
+                    stopSort: false,
+                    stepDelay: options.stepDelay || 500
             });
 
         },
 
         breakCheck: function () {
+            if (this.get('stopSort')) return;
             //this is called when the current index is larger then the next left value and should be inserted
             var incIndex = this.get('indexTotal');
 
@@ -40,6 +43,7 @@
         },
 
         checkValues: function () {
+            if (this.get('stopSort')) return;
             var col = this.get('collection'),
                 rIndex = this.get('indexCheck');
             this.rModel = col.at(rIndex).setActive();
@@ -47,10 +51,11 @@
 
 
             this.trigger('redraw');
-            setTimeout(_.bind(this.compareValues, this), 1000);
+            setTimeout(_.bind(this.compareValues, this), this.get('stepDelay'));
         },
 
         compareValues: function () {
+            if (this.get('stopSort')) return;
             var rValue = this.rModel.get('dataPoint'),
                 lValue = this.lModel.get('dataPoint');
 
@@ -67,18 +72,20 @@
         },
 
         switchValues: function () {
+            if (this.get('stopSort')) return;
             var col = this.get('collection'),
                 rIndex = this.get('indexCheck'),
                 holder = this.rModel;
 
             col.models[rIndex] = this.lModel.deactivate();
-            col.models[rIndex - 1] = holder.deactivate();
+            col.models[rIndex - 1] = holder;
+            console.log('swtch predraw', holder.get('active'));
             this.trigger('redraw');
             this.set('indexCheck',--rIndex);
             if (this.get('indexCheck') === 0) {
-                setTimeout(_.bind(this.breakCheck, this), 1000);
+                setTimeout(_.bind(this.breakCheck, this), this.get('stepDelay'));
             } else {
-                setTimeout(_.bind(this.checkValues, this), 1000);
+                setTimeout(_.bind(this.checkValues, this), this.get('stepDelay'));
             }
         },
 

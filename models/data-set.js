@@ -9,7 +9,7 @@
 
         initialize: function () {
             this.createSet();
-            new DVZ.DataSetView({model:this});
+            //new DVZ.DataSetView({model:this});
         },
 
         getRange: function () {
@@ -28,6 +28,8 @@
             collection.add({id:i})
             i++;
             }
+
+            return this;
         }
 
     });
